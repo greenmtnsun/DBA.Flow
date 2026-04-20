@@ -1,21 +1,21 @@
-﻿## --- 1. CONNECTIVITY & SETUP ---
+## --- 1. CONNECTIVITY & SETUP ---
 
 function Set-Vault {
     <#
     .SYNOPSIS
-        Connects a folder to GitLab. Standardizes the .gitignore for DBA ecosystems.
+        Connects a folder to a Git repository remote. Standardizes the .gitignore for DBA ecosystems.
     #>
     param(
-        [Parameter(Mandatory=$true)][string]$GitLabUrl,
+        [Parameter(Mandatory=$true)][string]$GitRepoUrl,
         [string]$UserEmail,
         [string]$UserName
     )
-    
+
     if (-not (Test-Path ".git")) {
         Write-Host "Initializing new Vault..." -ForegroundColor Cyan
         git init
-        git remote add origin $GitLabUrl
-        
+        git remote add origin $GitRepoUrl
+
         # Comprehensive ignore list for SQL/SSIS/RDL/PS
         $ignore = @(
             "*.user", "*.suo", "*.tmp", "*.log", "*.bak", # User/Temp noise
@@ -25,20 +25,20 @@ function Set-Vault {
         )
         $ignore | Out-File ".gitignore" -Encoding utf8 -Force
     }
-    
+
     # Set local identity if provided (prevents "Who am I?" errors)
     if ($UserEmail) { git config user.email $UserEmail }
     if ($UserName)  { git config user.name $UserName }
-    
+
     git branch -M main
-    Write-Host "Vault linked to: $GitLabUrl" -ForegroundColor Green
+    Write-Host "Vault linked to: $GitRepoUrl" -ForegroundColor Green
 }
 
 ## --- 2. THE SYNC ENGINE ---
 function Save-Work {
     <#
     .SYNOPSIS
-        Snapshots every file (SQL, PS1, RDL, DTSX) and pushes to GitLab/GitHub.
+        Snapshots every file (SQL, PS1, RDL, DTSX) and pushes to the remote repository.
         Handles atomic versioning and "First-Day" sync issues.
     #>
     param(
@@ -47,13 +47,13 @@ function Save-Work {
         [ValidateSet('Major','Minor','Build','Revision')]
         [string]$BumpType = 'Revision'
     )
-    
-    # 1. THE FULL VERSIONING LOGIC (RESTORED)
+
+    # 1. THE FULL VERSIONING LOGIC
     if ($NewVersion) {
         $Manifest = Get-ChildItem *.psd1 | Select-Object -First 1
         if ($Manifest) {
             $v = [version](Import-PowerShellDataFile $Manifest.FullName).ModuleVersion
-            
+
             switch ($BumpType) {
                 'Major'    { $newV = New-Object System.Version ($v.Major + 1), 0, 0, 0 }
                 'Minor'    { $newV = New-Object System.Version $v.Major, ($v.Minor + 1), 0, 0 }
@@ -61,7 +61,7 @@ function Save-Work {
                 'Revision' { $newV = New-Object System.Version $v.Major, $v.Minor, $v.Build, ($v.Revision + 1) }
             }
 
-            (Get-Content $Manifest.FullName -Raw) -replace "(ModuleVersion\s*=\s*['""])$($v.ToString())(['""])", "`${1}$newV`${2}" | Set-Content $Manifest.FullName
+            (Get-Content $Manifest.FullName -Raw) -replace "(ModuleVersion\s*=\s*['""])\Q$($v.ToString())\E(['""])", "`${1}$newV`${2}" | Set-Content $Manifest.FullName
             $Note = "[v$newV] $Note"
             Write-Host "Bumped $BumpType to $newV" -ForegroundColor Cyan
         }
@@ -70,18 +70,18 @@ function Save-Work {
     # 2. STAGE ALL ASSETS
     git add .
 
-    # 3. SYNC ENGINE (HARDENED)
+    # 3. SYNC ENGINE
     if (git status --porcelain) {
         Write-Host "Syncing with Vault..." -ForegroundColor Cyan
-        
-        # This handles the 'unrelated histories' curveball from GitHub
+
+        # This handles the 'unrelated histories' curveball
         git pull origin main --rebase --allow-unrelated-histories 2>$null
 
         git commit -m "$Note"
-        
+
         # Ensure we track the branch (vital for the first push)
         git push -u origin main
-        
+
         if ($LASTEXITCODE -eq 0) {
             Write-Host "Work synced and secured." -ForegroundColor Green
         } else {
@@ -92,7 +92,7 @@ function Save-Work {
     }
 }
 
-## --- 3. THE TOP 15 DBA UTILITIES ---
+## --- 3. THE TOP DBA UTILITIES ---
 
 function Show-History {
     <# .SYNOPSIS See a visual timeline of changes. #>
@@ -100,7 +100,7 @@ function Show-History {
 }
 
 function Find-CodeChange {
-    <# .SYNOPSIS Search all history for a string (e.g. searching for a dropped table). #>
+    <# .SYNOPSIS Search all history for a string (for example, a dropped table or index name). #>
     param([Parameter(Mandatory=$true)][string]$SearchString)
     git log -S "$SearchString" --patch
 }
@@ -108,7 +108,7 @@ function Find-CodeChange {
 function Restore-File {
     <# .SYNOPSIS Revert a single file to its last-saved state. #>
     param([Parameter(Mandatory=$true)][string]$FileName)
-    git checkout "$FileName"
+    git checkout -- "$FileName"
     Write-Host "Restored $FileName." -ForegroundColor Cyan
 }
 
@@ -119,11 +119,11 @@ function Clear-Junk {
 }
 
 function Undo-Changes {
-    <# .SYNOPSIS Wipe local mess and start fresh from GitLab. #>
+    <# .SYNOPSIS Wipe local mess and start fresh from the remote repository. #>
     if ((Read-Host "Wipe all unsaved work? (Y/N)") -eq 'Y') {
         git reset --hard HEAD
         git clean -fd
-        Write-Host "Local state reset to GitLab 'Truth'." -ForegroundColor Red
+        Write-Host "Local state reset to repository truth." -ForegroundColor Red
     }
 }
 

@@ -1,0 +1,236 @@
+h1. GitEasy Technical Wiki
+
+{info:title=Purpose}
+GitEasy is a PowerShell module that gives DBAs a practical Git workflow with command names that match how DBAs actually work: connect the folder, save work, inspect history, search changes, clean junk, recover a file, create a branch, and move on.
+{info}
+
+h2. Audience
+
+* Senior DBAs who want repeatable Git workflows without living in raw Git syntax
+* SQL Server, SSIS, SSRS, reporting, and automation teams
+* Junior team members who need a lower-friction path into source control
+* Teams handling customer work, migration work, module work, and operational scripts
+
+h2. Design Goals
+
+* Reduce Git friction for infrastructure and DBA teams
+* Make common actions memorable and safe
+* Keep local workspaces clean
+* Support simple version bumping during release work
+* Make forensic history search easy
+* Provide branch and rollback helpers without requiring deep Git knowledge
+
+h2. Module Identity
+
+|| Property || Value ||
+| Module Name | GitEasy |
+| Root Module | GitEasy.psm1 |
+| Manifest | GitEasy.psd1 |
+| PowerShell Version | 5.1 |
+| Author | Keith Ramsey |
+| Company | Keith Ramsey |
+| Current Exported Functions | 10 |
+
+h2. Command Catalog
+
+|| Command || Category || Purpose ||
+| *Set-Vault* | Setup | Initialize or connect a local folder to a Git remote and standardize ignore rules |
+| *Save-Work* | Save / Sync | Stage, commit, optionally version bump, and push |
+| *Show-History* | History | Show a quick visual timeline of recent changes |
+| *Find-CodeChange* | Forensics | Search all Git history for the addition or removal of a string |
+| *Restore-File* | Recovery | Restore one file to its last saved state |
+| *Clear-Junk* | Cleanup | Remove ignored artifacts and local build noise |
+| *Undo-Changes* | Reset | Hard reset local work after confirmation |
+| *New-WorkBranch* | Branching | Create a new branch for sandbox or risky work |
+| *Switch-Work* | Branching | Move between main and branch work |
+| *Get-VaultStatus* | Status | Show concise pending change status |
+
+h2. Typical Workflow
+
+h3. 1) Start or connect a work folder
+
+{code:powershell}
+Import-Module .\GitEasy.psd1 -Force
+Set-Vault -GitRepoUrl "https://github.com/your-org/your-repo.git" -UserName "Keith Ramsey" -UserEmail "you@example.com"
+{code}
+
+h3. 2) Make changes
+
+* Edit SQL scripts
+* Adjust PowerShell automation
+* Update SSRS or report artifacts
+* Modify module manifests or helper scripts
+
+h3. 3) Save work
+
+{code:powershell}
+Save-Work -Note "Fixed backup validation logic"
+{code}
+
+h3. 4) Release with version bump
+
+{code:powershell}
+Save-Work -Note "Added branch helper improvements" -NewVersion -BumpType Minor
+{code}
+
+h3. 5) Investigate history later
+
+{code:powershell}
+Show-History
+Find-CodeChange -SearchString "IX_User_Email"
+{code}
+
+h2. Command Reference
+
+h3. Set-Vault
+
+{panel:title=Synopsis|borderStyle=solid|borderColor=#4a6785|titleBGColor=#deebff}
+Connects a local folder to a Git remote and creates a DBA-friendly .gitignore when the folder is not already a Git repository.
+{panel}
+
+*Parameters*
+
+|| Parameter || Required || Type || Notes ||
+| GitRepoUrl | Yes | String | Remote repository URL to use as origin |
+| UserEmail | No | String | Sets local Git email identity |
+| UserName | No | String | Sets local Git display name |
+
+*What it does*
+* Creates a new Git repository if .git does not exist
+* Adds the remote as origin
+* Creates a .gitignore with common DBA / Visual Studio / temp exclusions
+* Sets local Git identity if values are supplied
+* Forces branch name to *main*
+
+*Example*
+{code:powershell}
+Set-Vault -GitRepoUrl "https://github.com/your-org/customer-migration.git"
+{code}
+
+h3. Save-Work
+
+{panel:title=Synopsis|borderStyle=solid|borderColor=#4a6785|titleBGColor=#deebff}
+Stages all changes, optionally bumps the first manifest version found in the folder, then commits and pushes to origin/main.
+{panel}
+
+*Parameters*
+
+|| Parameter || Required || Type || Default || Notes ||
+| Note | Yes | String | n/a | Commit message |
+| NewVersion | No | Switch | False | Enables manifest version bumping |
+| BumpType | No | String | Revision | Major, Minor, Build, or Revision |
+
+*What it does*
+* Stages all files with *git add .*
+* Optionally reads the first .psd1 manifest in the folder
+* Optionally increments version number
+* Pulls from origin/main using rebase and *--allow-unrelated-histories*
+* Commits with the note
+* Pushes to origin/main with upstream tracking
+
+h3. Show-History
+
+{code:powershell}
+Show-History
+{code}
+
+h3. Find-CodeChange
+
+{code:powershell}
+Find-CodeChange -SearchString "IX_User_Email"
+Find-CodeChange -SearchString "PROD-SQL-01"
+Find-CodeChange -SearchString "usp_GetOrders"
+{code}
+
+h3. Restore-File
+
+{code:powershell}
+Restore-File -FileName "Reports\Invoice.rdl"
+{code}
+
+h3. Clear-Junk
+
+{code:powershell}
+Clear-Junk
+{code}
+
+h3. Undo-Changes
+
+{panel:title=Warning|borderStyle=solid|borderColor=#c0392b|titleBGColor=#fdecea}
+Destructive by design. Use only when you really want to wipe unsaved local work.
+{panel}
+
+{code:powershell}
+Undo-Changes
+{code}
+
+h3. New-WorkBranch
+
+{code:powershell}
+New-WorkBranch -Name "report-redesign"
+{code}
+
+h3. Switch-Work
+
+{code:powershell}
+Switch-Work
+Switch-Work -Name "report-redesign"
+{code}
+
+h3. Get-VaultStatus
+
+{code:powershell}
+Get-VaultStatus
+{code}
+
+h2. Safety Model
+
+|| Command || Risk Level || Why ||
+| Set-Vault | Low | Creates or standardizes repo metadata |
+| Save-Work | Medium | Commits and pushes all staged changes |
+| Show-History | Low | Read-only |
+| Find-CodeChange | Low | Read-only |
+| Restore-File | Medium | Reverts a file |
+| Clear-Junk | Medium | Deletes ignored local files |
+| Undo-Changes | High | Hard reset and clean; destructive |
+| New-WorkBranch | Low | Creates a branch |
+| Switch-Work | Low | Changes current branch |
+| Get-VaultStatus | Low | Read-only |
+
+h2. Troubleshooting
+
+h3. Import-Module fails
+
+{code:powershell}
+Test-ModuleManifest .\GitEasy.psd1
+Import-Module .\GitEasy.psd1 -Force
+{code}
+
+h3. Push fails in Save-Work
+
+* Verify credentials and remote access
+* Confirm that *origin* exists
+* Check whether the target branch is *main*
+* Confirm Git is installed and on PATH
+
+h2. Training Summary
+
+{excerpt}
+Teach GitEasy in three commands first: *Set-Vault*, *Save-Work*, and *Get-VaultStatus*. Once those are comfortable, add *Show-History*, *Find-CodeChange*, and branch helpers. Save *Undo-Changes* for explicit safety training.
+{excerpt}
+
+h2. Copy/Paste Quick Reference
+
+{code:powershell}
+Import-Module .\GitEasy.psd1 -Force
+Set-Vault -GitRepoUrl "https://github.com/your-org/your-repo.git"
+Get-VaultStatus
+Save-Work -Note "Initial import"
+Save-Work -Note "Added reporting helper" -NewVersion -BumpType Minor
+Show-History
+Find-CodeChange -SearchString "usp_MyProcedure"
+Restore-File -FileName "Reports\Invoice.rdl"
+Clear-Junk
+New-WorkBranch -Name "sandbox-change"
+Switch-Work -Name "main"
+{code}
