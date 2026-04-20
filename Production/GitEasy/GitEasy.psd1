@@ -1,5 +1,5 @@
 ﻿@{
-    RootModule        = 'DBA.Flow.psm1'
+    RootModule        = 'GitEasy.psm1'
     ModuleVersion     = '1.0.0.0'
     GUID              = '2e113abf-c0e7-4dfb-9cb1-69476d7541f6'
     Author            = 'Senior DBA Team'
@@ -28,3 +28,4 @@
         }
     }
 }
+

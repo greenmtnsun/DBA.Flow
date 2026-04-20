@@ -1,1 +1,2 @@
-﻿Import-Module ..\DBA.Flow.psd1; Show-History
+﻿Import-Module ..\GitEasy.psd1; Show-History
+

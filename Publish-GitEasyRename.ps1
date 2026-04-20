@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
     [string]$RemoteUrl,
@@ -24,9 +24,9 @@ if ($UserEmail) { git config user.email $UserEmail }
 
 # Only remove files that are truly obsolete
 $legacyFiles = @(
-    "DBA.Flow.psd1",
-    "DBA.Flow.psm1",
-    "DBA_Flow_Master_Wiki.pdf",
+    "GitEasy.psd1",
+    "GitEasy.psm1",
+    "GitEasy_Master_Wiki.pdf",
     "README_GitEasy.md",
     "Wiki-Readme.txt",
     "Wiki-Readme-GitEasy.txt",

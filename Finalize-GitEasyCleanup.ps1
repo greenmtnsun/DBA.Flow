@@ -1,4 +1,4 @@
-[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+﻿[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
     [string]$Branch = "main",
     [switch]$Push,
@@ -25,9 +25,9 @@ if (-not (Test-Path ".git")) {
 }
 
 $obsoleteFiles = @(
-    "DBA.Flow.psd1",
-    "DBA.Flow.psm1",
-    "DBA_Flow_Master_Wiki.pdf",
+    "GitEasy.psd1",
+    "GitEasy.psm1",
+    "GitEasy_Master_Wiki.pdf",
     "README_GitEasy.md",
     "Wiki-Readme.txt",
     "Wiki-Readme-GitEasy.txt",
@@ -71,7 +71,7 @@ Write-Host ""
 Write-Host "Files that will remain as the current GitEasy set:" -ForegroundColor Green
 $replacementFiles | ForEach-Object { Write-Host "  $_" -ForegroundColor Green }
 
-if ($PSCmdlet.ShouldProcess("legacy DBA.Flow and transitional rename files", "remove obsolete files and stage current GitEasy files")) {
+if ($PSCmdlet.ShouldProcess("legacy GitEasy and transitional rename files", "remove obsolete files and stage current GitEasy files")) {
 
     foreach ($file in $found) {
         Invoke-Git -Arguments @("rm", "-f", "--", $file)
@@ -86,7 +86,7 @@ if ($PSCmdlet.ShouldProcess("legacy DBA.Flow and transitional rename files", "re
     }
 
     if ($CreateCommit) {
-        Invoke-Git -Arguments @("commit", "-m", "Finalize GitEasy rename and remove obsolete DBA.Flow files")
+        Invoke-Git -Arguments @("commit", "-m", "Finalize GitEasy rename and remove obsolete GitEasy files")
     }
 
     if ($Push) {
@@ -96,3 +96,4 @@ if ($PSCmdlet.ShouldProcess("legacy DBA.Flow and transitional rename files", "re
     Write-Host ""
     Write-Host "Cleanup complete." -ForegroundColor Green
 }
+

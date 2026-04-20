@@ -1,2 +1,3 @@
-# DBA.Flow
+﻿# GitEasy
 Git functions for DBAs
+
