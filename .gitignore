@@ -1,0 +1,14 @@
+﻿*.user
+*.suo
+*.tmp
+*.log
+*.bak
+bin/
+obj/
+TestResults/
+.vs/
+.idea/
+.vscode/
+*.pfx
+secrets.json
+*.rdl.data
