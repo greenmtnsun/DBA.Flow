@@ -1,4 +1,4 @@
-## --- 1. CONNECTIVITY & SETUP ---
+﻿## --- 1. CONNECTIVITY & SETUP ---
 
 function Set-Vault {
     <#
@@ -174,7 +174,7 @@ function Save-Work {
     <#
     .SYNOPSIS
         Snapshots every file and pushes to GitHub or GitLab.
-        Handles module versioning and pulls peer updates first.
+        Handles module versioning and shows clearer errors.
     #>
     [CmdletBinding()]
     param(
@@ -184,11 +184,37 @@ function Save-Work {
         [string]$BumpType = 'Revision'
     )
 
-    # 1. Handle PowerShell Module Versioning
+    function Invoke-GitEasyGit {
+        param(
+            [Parameter(Mandatory = $true)][string]$Step,
+            [Parameter(Mandatory = $true)][string[]]$Arguments
+        )
+
+        Write-Host ""
+        Write-Host "[$Step]" -ForegroundColor Cyan
+        Write-Host ("git " + ($Arguments -join ' ')) -ForegroundColor DarkGray
+
+        $output = & git @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+
+        if ($output) {
+            $output | ForEach-Object { Write-Host $_ }
+        }
+
+        if ($exitCode -ne 0) {
+            throw "Git step failed: $Step (exit code $exitCode)"
+        }
+
+        [pscustomobject]@{
+            Output   = $output
+            ExitCode = $exitCode
+        }
+    }
+
     if ($NewVersion) {
-        $Manifest = Get-ChildItem *.psd1 | Select-Object -First 1
-        if ($Manifest) {
-            $manifestData = Import-PowerShellDataFile $Manifest.FullName
+        $manifest = Get-ChildItem *.psd1 | Select-Object -First 1
+        if ($manifest) {
+            $manifestData = Import-PowerShellDataFile $manifest.FullName
             $v = [version]$manifestData.ModuleVersion
 
             switch ($BumpType) {
@@ -200,60 +226,79 @@ function Save-Work {
 
             $pattern = "ModuleVersion\s*=\s*'[^']+'"
             $replacement = "ModuleVersion     = '$newV'"
-            (Get-Content $Manifest.FullName -Raw) -replace $pattern, $replacement | Set-Content $Manifest.FullName
+            (Get-Content $manifest.FullName -Raw) -replace $pattern, $replacement | Set-Content $manifest.FullName
 
             $Note = "[v$newV] $Note"
-            Write-Host "Bumped $BumpType to $newV" -ForegroundColor Cyan
+            Write-Host "Bumped $BumpType to $newV" -ForegroundColor Green
         }
     }
 
-    # 2. Check whether anything changed before doing remote work
-    $pending = git status --porcelain
-    if (-not $pending) {
+    $statusBefore = git status --porcelain
+    if (-not $statusBefore) {
         Write-Warning "No changes found to save."
         return
     }
 
-    # 3. Pull first, before staging
-    Write-Host "Checking for peer updates..." -ForegroundColor Gray
-    git pull origin main --rebase
+    Write-Host ""
+    Write-Host "[Pre-check]" -ForegroundColor Cyan
+    $statusBefore | ForEach-Object { Write-Host $_ }
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Pull failed. Fix that first, then run Save-Work again."
-        return
-    }
+    $stashed = $false
 
-    # 4. Now stage and commit
-    git add .
+    try {
+        Write-Host ""
+        Write-Host "[Stash local changes]" -ForegroundColor Cyan
+        $stashResult = & git stash push -u -m "GitEasy temporary save before Save-Work" 2>&1
+        $stashExit = $LASTEXITCODE
+        $stashResult | ForEach-Object { Write-Host $_ }
 
-    $pendingAfterAdd = git status --porcelain
-    if (-not $pendingAfterAdd) {
-        Write-Warning "No changes found to commit after staging."
-        return
-    }
+        if ($stashExit -ne 0) {
+            throw "Could not stash local changes before pull."
+        }
 
-    git commit -m "$Note"
+        $stashed = $true
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Commit failed."
-        return
-    }
+        Invoke-GitEasyGit -Step "Check for peer updates" -Arguments @("pull", "origin", "main", "--rebase")
 
-    # 5. Push
-    git push origin main
+        if ($stashed) {
+            Write-Host ""
+            Write-Host "[Restore stashed changes]" -ForegroundColor Cyan
+            $popResult = & git stash pop 2>&1
+            $popExit = $LASTEXITCODE
+            $popResult | ForEach-Object { Write-Host $_ }
 
-    if ($LASTEXITCODE -eq 0) {
+            if ($popExit -ne 0) {
+                throw "Stash pop failed. Resolve the stash state before running Save-Work again."
+            }
+
+            $stashed = $false
+        }
+
+        Invoke-GitEasyGit -Step "Stage files" -Arguments @("add", ".")
+
+        $statusAfterAdd = git status --porcelain
+        if (-not $statusAfterAdd) {
+            Write-Warning "No changes found to commit after staging."
+            return
+        }
+
+        Write-Host ""
+        Write-Host "[Commit preview]" -ForegroundColor Cyan
+        $statusAfterAdd | ForEach-Object { Write-Host $_ }
+
+        Invoke-GitEasyGit -Step "Commit changes" -Arguments @("commit", "-m", $Note)
+        Invoke-GitEasyGit -Step "Push changes" -Arguments @("push", "origin", "main")
+
+        Write-Host ""
         Write-Host "Work synced and secured." -ForegroundColor Green
     }
-    else {
-        Write-Warning "Push failed. Your commit is still safe locally."
-        Write-Host "Use Show-Remote to see where Git points." -ForegroundColor Yellow
-        Write-Host "Use Test-Login to test access safely." -ForegroundColor Yellow
-        Write-Host "Use Reset-Login if Windows saved the wrong login." -ForegroundColor Yellow
-        Write-Host "Use Set-Token for HTTPS token login or Set-Ssh for SSH." -ForegroundColor Yellow
+    catch {
+        Write-Host ""
+        Write-Warning $_.Exception.Message
+        Write-Host "Your work is still local." -ForegroundColor Yellow
+        throw
     }
 }
-## --- 3. THE TOP 15 DBA UTILITIES ---
 
 function Show-History {
     <# .SYNOPSIS See a visual timeline of changes. #>
@@ -334,3 +379,4 @@ function Get-VaultStatus {
 }
 
 Export-ModuleMember -Function Set-Vault, Show-Remote, Set-Token, Set-Ssh, Reset-Login, Test-Login, Save-Work, Show-History, Find-CodeChange, Restore-File, Clear-Junk, Undo-Changes, New-WorkBranch, Switch-Work, Get-VaultStatus
+
