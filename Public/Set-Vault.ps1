@@ -1,5 +1,20 @@
 ﻿function Set-Vault {
-    [CmdletBinding()]
-    param()
-    throw 'Set-Vault exists as part of the classic GitEasy public API, but its V2 engine implementation is not wired yet.'
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [ValidateSet('manager', 'manager-core', 'wincred', 'cache')]
+        [string]$Helper = 'manager'
+    )
+
+    Test-GEGitInstalled | Out-Null
+
+    if (-not $PSCmdlet.ShouldProcess('global Git config', "Set credential.helper to $Helper")) {
+        return
+    }
+
+    Invoke-GEGit -ArgumentList @('config', '--global', 'credential.helper', $Helper) | Out-Null
+
+    [PSCustomObject]@{
+        CredentialHelper = $Helper
+        Message          = "Git credential helper set to $Helper."
+    }
 }
