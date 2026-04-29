@@ -1,1 +1,3 @@
-﻿*.bak
+*.bak
+/Wiki/
+/New-GitEasyWiki.ps1
