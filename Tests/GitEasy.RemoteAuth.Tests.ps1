@@ -67,7 +67,9 @@ Describe 'remote and credential helper commands' {
     }
 
     It 'Set-Token rejects embedded credentials' {
-        { Set-Token -RemoteUrl 'https://token@github.com/greenmtnsun/GitEasy.git' } | Should Throw
+        $caught = $null
+        try { Set-Token -RemoteUrl 'https://token@github.com/greenmtnsun/GitEasy.git' } catch { $caught = $_ }
+        $caught | Should Not BeNullOrEmpty
     }
 
     It 'Set-Token configures a clean HTTPS origin' {

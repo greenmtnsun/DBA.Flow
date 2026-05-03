@@ -506,6 +506,28 @@ $indexLines.Add('- [[Troubleshooting]]')
 Write-WikiFile -Path (Join-Path $WikiRoot 'Private-Helpers.md') -Body ($indexLines.ToArray() -join "`r`n")
 
 # ----------------------------------------------------------------------------
+# Phase 3.5 - Remove orphaned Private-*.md pages (helper deleted from source)
+# ----------------------------------------------------------------------------
+
+$validNames = @($privateRecords | Select-Object -ExpandProperty Name -Unique)
+$existingPages = @(Get-ChildItem -LiteralPath $WikiRoot -Filter 'Private-*.md' -File | Where-Object { $_.Name -ne 'Private-Helpers.md' })
+
+$removed = @()
+foreach ($page in $existingPages) {
+    $stem = $page.BaseName -replace '^Private-',''
+    if (-not ($validNames -contains $stem)) {
+        Remove-Item -LiteralPath $page.FullName -Force
+        $removed += $page.Name
+    }
+}
+
+if ($removed.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Removed orphaned wiki pages (helpers no longer exist in source):' -ForegroundColor Yellow
+    foreach ($r in $removed) { Write-Host "  $r" }
+}
+
+# ----------------------------------------------------------------------------
 # Phase 4 - Audit
 # ----------------------------------------------------------------------------
 
