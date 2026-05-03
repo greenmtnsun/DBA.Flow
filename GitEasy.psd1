@@ -1,6 +1,6 @@
 ﻿@{
     RootModule = 'GitEasy.psm1'
-    ModuleVersion = '0.10.0'
+    ModuleVersion = '1.0.0'
     GUID = 'a7f52f47-87b2-42c4-9f37-9f329edb7a01'
     Author = 'Keith Ramsey'
     CompanyName = 'Keith Ramsey'

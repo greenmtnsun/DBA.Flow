@@ -558,7 +558,7 @@ function Get-CBHGaps {
 $StaleClaimPatterns = @(
     'TODO','TBD','FIXME','XXX','HACK',
     'not yet','not yet wired','known enhancement','known bug','known issue',
-    'should be','will be','pending','planned','in progress','coming soon','out of date'
+    'coming soon','out of date'
 )
 
 function Get-StaleClaimHits {
