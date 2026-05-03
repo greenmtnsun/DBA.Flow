@@ -1,4 +1,32 @@
 function Assert-GESafeSave {
+    <#
+    .SYNOPSIS
+    Throw a plain-English exception if it is not safe to save right now.
+
+    .DESCRIPTION
+    Assert-GESafeSave guards Save-Work against three failure modes: not being in a saveable workspace; an unfinished merge / rebase / cherry-pick / revert / bisect being in progress; and unfinished merge conflicts. It uses Test-GERepositoryBusy and Get-GEConflictFiles for those checks so the logic is single-sourced.
+
+    .PARAMETER Path
+    The folder to check. Defaults to the current location.
+
+    .PARAMETER LogPath
+    Optional diagnostic log path; passed through to inner Git calls.
+
+    .EXAMPLE
+    Assert-GESafeSave
+
+    .NOTES
+    Internal. Returns $true on success; throws plain-English on every failure.
+
+    .LINK
+    Save-Work
+
+    .LINK
+    Test-GERepositoryBusy
+
+    .LINK
+    Get-GEConflictFiles
+    #>
     [CmdletBinding()]
     param(
         [string]$Path = (Get-Location).Path,

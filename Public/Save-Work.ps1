@@ -1,4 +1,55 @@
 function Save-Work {
+    <#
+    .SYNOPSIS
+    Save your work and (by default) publish it to where the project is shared.
+
+    .DESCRIPTION
+    Save-Work is the main GitEasy command for preserving work. It runs three steps in one: it stages every change, records them as a saved point with your message, and then publishes the saved point to the project's published location unless you ask it not to.
+
+    Save-Work does several safety checks before touching anything: it refuses to run inside an unfinished merge, rebase, cherry-pick, revert, or bisect; it refuses to save while there are unfinished conflicts; and it tells you in plain English when something is missing.
+
+    When your work area has nothing new to save but you have saved-but-not-yet-published changes, Save-Work publishes those for you. When there is nothing local and nothing pending, it tells you "No changes to save."
+
+    Each Save-Work run writes a self-contained log file. Successful runs log silently. Failures throw a plain-English message and point at the log file with the technical detail.
+
+    .PARAMETER Message
+    The message that describes this saved point. If you omit it, Save-Work uses a default that includes the current timestamp.
+
+    .PARAMETER NoPush
+    Save your work locally only. Do not publish.
+
+    .PARAMETER LogPath
+    Override the directory where the diagnostic log for this run is written. Defaults to %LOCALAPPDATA%\GitEasy\Logs and can be overridden site-wide through the GITEASY_LOG_PATH environment variable.
+
+    .EXAMPLE
+    Save-Work 'Update README'
+
+    .EXAMPLE
+    Save-Work 'Local checkpoint before refactor' -NoPush
+
+    .EXAMPLE
+    Save-Work
+
+    .NOTES
+    Safety:
+    - Refuses to run when an unfinished merge, rebase, cherry-pick, revert, or bisect is in progress.
+    - Refuses to run when there are unfinished conflicts; lists the files that need attention.
+    - Treats LF/CRLF warnings as expected output, not as conflicts.
+    - Writes commit messages without UTF-8 BOM.
+    - Hides raw Git output from the user. On failure, the thrown message points at a log file with the full technical detail.
+
+    .LINK
+    Find-CodeChange
+
+    .LINK
+    Show-History
+
+    .LINK
+    Show-Remote
+
+    .LINK
+    Show-Diagnostic
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Position = 0)]

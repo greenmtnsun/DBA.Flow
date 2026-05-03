@@ -1,4 +1,40 @@
 function Reset-Login {
+    <#
+    .SYNOPSIS
+    Forget any saved login for the active project folder so it can be set up again.
+
+    .DESCRIPTION
+    Reset-Login asks the system credential helper to forget the saved login for the host of the active project folder. Use it when the saved login has gone stale (token rotated, password changed) or when GitEasy keeps using the wrong identity.
+
+    Reset-Login currently supports HTTPS published locations only.
+
+    .PARAMETER RemoteName
+    The name of the published location whose login should be forgotten. Defaults to origin.
+
+    .PARAMETER LogPath
+    Override the directory where the diagnostic log for this run is written.
+
+    .EXAMPLE
+    Reset-Login
+
+    .EXAMPLE
+    Reset-Login; Test-Login
+
+    .NOTES
+    Safety:
+    - After Reset-Login, you may be prompted again for credentials on the next operation. That is expected.
+    - Do not run during an active save or merge.
+    - Always run Test-Login after Reset-Login before saving more work.
+
+    .LINK
+    Set-Token
+
+    .LINK
+    Set-Ssh
+
+    .LINK
+    Test-Login
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$RemoteName = 'origin',

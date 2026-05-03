@@ -1,4 +1,23 @@
 ﻿function Get-GERemoteSummary {
+    <#
+    .SYNOPSIS
+    Return the list of configured published locations with provider and purpose.
+
+    .DESCRIPTION
+    Parses git remote -v and returns one PSCustomObject per fetch/push entry, including Repository, Remote, Purpose (fetch or push), Provider (GitHub, GitLab, Other), and Url. Show-Remote wraps this for the user.
+
+    .PARAMETER Path
+    The folder to query. Defaults to the current location.
+
+    .EXAMPLE
+    Get-GERemoteSummary
+
+    .NOTES
+    Internal. Read-only.
+
+    .LINK
+    Show-Remote
+    #>
     [CmdletBinding()]
     param(
         [string]$Path = (Get-Location).Path

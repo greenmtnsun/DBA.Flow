@@ -1,4 +1,44 @@
 function Set-Token {
+    <#
+    .SYNOPSIS
+    Configure or update the HTTPS published location for token-based login.
+
+    .DESCRIPTION
+    Set-Token registers an HTTPS published-location URL for the active project folder. It rejects URLs that embed credentials (like https://token@host/path) and only accepts clean HTTPS URLs, so secrets never end up in published configuration. Use this before Test-Login when first setting up a project against GitHub or GitLab over HTTPS.
+
+    .PARAMETER RemoteUrl
+    The HTTPS URL of the published location. Must start with https:// and must not embed a username, password, or token.
+
+    .PARAMETER RemoteName
+    The name of the published location to configure. Defaults to origin.
+
+    .PARAMETER LogPath
+    Override the directory where the diagnostic log for this run is written. Defaults to %LOCALAPPDATA%\GitEasy\Logs.
+
+    .EXAMPLE
+    Set-Token -RemoteUrl 'https://github.com/example/repo.git'
+
+    .EXAMPLE
+    Set-Token -RemoteUrl 'https://gitlab.com/example/repo.git' -RemoteName origin
+
+    .NOTES
+    Safety:
+    - Never paste tokens into the URL itself. Use a credential helper instead.
+    - After Set-Token, run Test-Login to confirm authentication works.
+    - Failures point at a log file with the full technical detail.
+
+    .LINK
+    Set-Vault
+
+    .LINK
+    Get-VaultStatus
+
+    .LINK
+    Test-Login
+
+    .LINK
+    Reset-Login
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)] [string]$RemoteUrl,

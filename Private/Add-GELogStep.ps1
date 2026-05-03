@@ -1,4 +1,38 @@
 function Add-GELogStep {
+    <#
+    .SYNOPSIS
+    Append one step record to an open diagnostic log file.
+
+    .DESCRIPTION
+    Each record contains the step name, exit code, optional note, and optional output lines. Output lines are written line by line, indented two spaces. Stderr output is conventionally prefixed [stderr]. The file is appended without a UTF-8 BOM. Silently no-ops if the log file does not exist.
+
+    .PARAMETER Path
+    The log file path returned by Start-GELogSession.
+
+    .PARAMETER Step
+    Friendly description of what was attempted (e.g. "git push").
+
+    .PARAMETER ExitCode
+    Numeric exit code from the operation.
+
+    .PARAMETER Output
+    Output lines (stdout, stderr, or both) to record.
+
+    .PARAMETER Note
+    Optional free-form note recorded under [note].
+
+    .EXAMPLE
+    Add-GELogStep -Path $session.Path -Step 'git push' -ExitCode 0 -Output $output
+
+    .NOTES
+    Internal. Append-only.
+
+    .LINK
+    Start-GELogSession
+
+    .LINK
+    Complete-GELogSession
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

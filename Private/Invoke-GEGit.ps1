@@ -1,4 +1,37 @@
 function Invoke-GEGit {
+    <#
+    .SYNOPSIS
+    Run a Git command and return its exit code and output as separate stdout and stderr arrays.
+
+    .DESCRIPTION
+    Invoke-GEGit is the engine's single point of contact with Git. It captures stdout and stderr separately so that warnings (for example, LF/CRLF notices) do not poison parsed output. By default it throws when Git exits non-zero; -AllowFailure suppresses that and returns the result for the caller to inspect.
+
+    Pass -LogPath to append a per-step record (command, exit code, stdout, stderr) to a diagnostic log file.
+
+    .PARAMETER ArgumentList
+    The Git command and its arguments, as a string array.
+
+    .PARAMETER WorkingDirectory
+    Where to run the command. Defaults to the current location.
+
+    .PARAMETER AllowFailure
+    Return the result instead of throwing when the exit code is non-zero.
+
+    .PARAMETER LogPath
+    Optional path to a diagnostic log file. When set, every call appends a step record.
+
+    .EXAMPLE
+    $r = Invoke-GEGit -ArgumentList @('rev-parse', '--show-toplevel')
+
+    .EXAMPLE
+    $r = Invoke-GEGit -ArgumentList @('push') -WorkingDirectory $root -LogPath $session.Path
+
+    .NOTES
+    Internal. Public commands route every Git call through this helper.
+
+    .LINK
+    Save-Work
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

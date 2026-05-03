@@ -1,3 +1,22 @@
+<#
+.SYNOPSIS
+Scan the GitEasy public surface for git-jargon leakage.
+
+.DESCRIPTION
+Audit-PublicJargon.ps1 walks every Public\*.ps1 file, extracts user-facing strings (Write-Host / Write-Warning / Write-Error / Write-Information / Write-Output / Write-Verbose call arguments and throw expressions) plus parameter names, and flags occurrences of git terminology categorized as HARD (almost certainly should be translated) or SOFT (sticky words like "branch" or "push" that often have no good plain-English replacement and should be reviewed in context).
+
+The script does not modify any files; it produces a report.
+
+.PARAMETER ProjectRoot
+Absolute path to the GitEasy source repository. Defaults to C:\Sysadmin\Scripts\GitEasyV2.
+
+.EXAMPLE
+.\tools\Audit-PublicJargon.ps1
+
+.NOTES
+Companion to the GitEasy "no jargon for users" rule.
+#>
+
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = 'C:\Sysadmin\Scripts\GitEasyV2'

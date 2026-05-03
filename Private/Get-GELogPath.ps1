@@ -1,4 +1,29 @@
 function Get-GELogPath {
+    <#
+    .SYNOPSIS
+    Resolve the directory where GitEasy diagnostic logs should be written.
+
+    .DESCRIPTION
+    Resolution order: -OverridePath parameter, then GITEASY_LOG_PATH environment variable, then %LOCALAPPDATA%\GitEasy\Logs.
+
+    .PARAMETER OverridePath
+    Explicit path that wins over both the env var and the default.
+
+    .EXAMPLE
+    $dir = Get-GELogPath
+
+    .EXAMPLE
+    $dir = Get-GELogPath -OverridePath 'D:\diagnostics'
+
+    .NOTES
+    Internal. No I/O.
+
+    .LINK
+    Show-Diagnostic
+
+    .LINK
+    Start-GELogSession
+    #>
     [CmdletBinding()]
     param(
         [string]$OverridePath

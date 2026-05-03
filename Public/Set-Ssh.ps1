@@ -1,4 +1,41 @@
 function Set-Ssh {
+    <#
+    .SYNOPSIS
+    Configure or convert the published location to SSH-based access.
+
+    .DESCRIPTION
+    Set-Ssh sets the published location for the active project folder to an SSH URL. If you do not provide one, Set-Ssh reads the existing HTTPS URL and converts it to its SSH form (for example, https://github.com/example/repo.git becomes git@github.com:example/repo.git). Use it when SSH is preferred over HTTPS, or when corporate environments require key-based authentication.
+
+    .PARAMETER RemoteName
+    The name of the published location to configure. Defaults to origin.
+
+    .PARAMETER RemoteUrl
+    Optional SSH URL. If omitted, Set-Ssh converts the existing HTTPS URL.
+
+    .PARAMETER LogPath
+    Override the directory where the diagnostic log for this run is written.
+
+    .EXAMPLE
+    Set-Ssh
+
+    .EXAMPLE
+    Set-Ssh -RemoteUrl 'git@github.com:example/repo.git'
+
+    .NOTES
+    Safety:
+    - Do not commit private keys.
+    - After Set-Ssh, run Test-Login to confirm key-based authentication works.
+    - If SSH unexpectedly prompts for credentials, run Show-Remote and verify the URL.
+
+    .LINK
+    Test-Login
+
+    .LINK
+    Show-Remote
+
+    .LINK
+    Reset-Login
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$RemoteName = 'origin',

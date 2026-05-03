@@ -1,4 +1,26 @@
 ﻿function Test-GERemoteUrlSafe {
+    <#
+    .SYNOPSIS
+    Throw if a remote URL embeds credentials or is not HTTPS or SSH.
+
+    .DESCRIPTION
+    Rejects URLs of the form scheme://user@host/path (where credentials are pasted into the URL itself) and rejects any URL that is not HTTPS or SSH. Returns $true on success.
+
+    .PARAMETER RemoteUrl
+    The URL to validate.
+
+    .EXAMPLE
+    Test-GERemoteUrlSafe -RemoteUrl 'https://github.com/example/repo.git'
+
+    .NOTES
+    Internal. Read-only validation.
+
+    .LINK
+    Set-Token
+
+    .LINK
+    Set-Ssh
+    #>
     [CmdletBinding()]
     param([Parameter(Mandatory)] [string]$RemoteUrl)
 

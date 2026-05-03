@@ -1,3 +1,25 @@
+<#
+.SYNOPSIS
+Regenerate the GitEasy private-helper wiki pages from the current source.
+
+.DESCRIPTION
+Update-GitEasyPrivateWiki.ps1 keeps the Private-*.md wiki pages in sync with the helpers under Private\. It AST-parses every helper, builds the cross-reference of who calls whom from Public\ and Private\, and writes a per-helper page with summary, description (from .DESCRIPTION CBH if present, else verb-based boilerplate), parameters, internal usage, internal examples, safety notes, source file, source, and related pages.
+
+Pages whose helper has been deleted from source are removed automatically.
+
+.PARAMETER ProjectRoot
+Absolute path to the GitEasy source repository. Defaults to C:\Sysadmin\Scripts\GitEasyV2.
+
+.PARAMETER WikiRoot
+Absolute path to the local clone of the GitEasy GitHub Wiki repo. Defaults to C:\Sysadmin\Scripts\GitEasyV2-GitHubWiki.
+
+.EXAMPLE
+.\Update-GitEasyPrivateWiki.ps1
+
+.NOTES
+Pairs with Update-GitEasyCommandWiki.ps1 (richer schema for the user-facing public surface).
+#>
+
 [CmdletBinding()]
 param(
     [string]$ProjectRoot = 'C:\Sysadmin\Scripts\GitEasyV2',
@@ -81,18 +103,33 @@ function Get-FunctionRecords {
         $synopsis    = ''
 
         $rawText = $ast.Extent.Text
-        $priorText = $rawText.Substring(0, $fn.Extent.StartOffset)
-        $helpBlocks = [regex]::Matches($priorText, '(?s)<#(.*?)#>')
+        $help = ''
 
-        if ($helpBlocks.Count -gt 0) {
-            $help = $helpBlocks[$helpBlocks.Count - 1].Groups[1].Value
+        $bodyStart = $fn.Body.Extent.StartOffset
+        $bodyEnd   = $fn.Body.Extent.EndOffset
+        if ($bodyEnd -gt $bodyStart -and $bodyStart -ge 0) {
+            $bodyText = $rawText.Substring($bodyStart, $bodyEnd - $bodyStart)
+            $insideMatch = [regex]::Match($bodyText, '(?s)<#(.*?)#>')
+            if ($insideMatch.Success) {
+                $help = $insideMatch.Groups[1].Value
+            }
+        }
 
-            $synMatch = [regex]::Match($help, '(?is)\.SYNOPSIS\s+(.*?)(\.[A-Z]+|\z)')
+        if ([string]::IsNullOrWhiteSpace($help)) {
+            $priorText = $rawText.Substring(0, $fn.Extent.StartOffset)
+            $priorBlocks = [regex]::Matches($priorText, '(?s)<#(.*?)#>')
+            if ($priorBlocks.Count -gt 0) {
+                $help = $priorBlocks[$priorBlocks.Count - 1].Groups[1].Value
+            }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($help)) {
+            $synMatch = [regex]::Match($help, '(?is)\.SYNOPSIS\s+(.*?)(?=\r?\n\s*\.[A-Z]+|\z)')
             if ($synMatch.Success) {
                 $synopsis = ($synMatch.Groups[1].Value -replace '\s+', ' ').Trim()
             }
 
-            $descMatch = [regex]::Match($help, '(?is)\.DESCRIPTION\s+(.*?)(\.[A-Z]+|\z)')
+            $descMatch = [regex]::Match($help, '(?is)\.DESCRIPTION\s+(.*?)(?=\r?\n\s*\.[A-Z]+|\z)')
             if ($descMatch.Success) {
                 $description = ($descMatch.Groups[1].Value -replace '\s+', ' ').Trim()
             }

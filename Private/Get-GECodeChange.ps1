@@ -1,4 +1,23 @@
 ﻿function Get-GECodeChange {
+    <#
+    .SYNOPSIS
+    Return a structured summary of the active workspace state.
+
+    .DESCRIPTION
+    Reads git status --short and git diff --stat (both staged and unstaged) and assembles a single object describing the repository, the active working area, whether things are clean, and counts of staged, unstaged, and untracked changes. Find-CodeChange wraps this for the user.
+
+    .PARAMETER Path
+    The folder to query. Defaults to the current location.
+
+    .EXAMPLE
+    $state = Get-GECodeChange
+
+    .NOTES
+    Internal. Read-only.
+
+    .LINK
+    Find-CodeChange
+    #>
     [CmdletBinding()]
     param(
         [string]$Path = (Get-Location).Path
