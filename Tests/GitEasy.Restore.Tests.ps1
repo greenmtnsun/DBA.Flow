@@ -237,6 +237,7 @@ Describe 'Clear-Junk' {
     }
 
     It 'lists junk files without removing anything by default' {
+        Set-Content -LiteralPath (Join-Path $script:TempRepo '.gitignore') -Value '*.bak' -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $script:TempRepo 'leftover.bak') -Value 'junk' -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $script:TempRepo 'kept.txt')     -Value 'keep' -Encoding UTF8
 
@@ -247,7 +248,8 @@ Describe 'Clear-Junk' {
         ($result.PSObject.Properties.Name -contains 'Candidates') | Should Be $true
     }
 
-    It 'removes junk files only when -Force is supplied' {
+    It 'removes ignored files when -Force is supplied' {
+        Set-Content -LiteralPath (Join-Path $script:TempRepo '.gitignore') -Value '*.bak' -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $script:TempRepo 'leftover.bak') -Value 'junk' -Encoding UTF8
 
         Clear-Junk -Force | Out-Null
@@ -255,10 +257,10 @@ Describe 'Clear-Junk' {
         Test-Path -LiteralPath (Join-Path $script:TempRepo 'leftover.bak') | Should Be $false
     }
 
-    It 'never removes tracked files even with -Force' {
+    It 'never removes tracked files even with -Force -Aggressive' {
         Set-Content -LiteralPath (Join-Path $script:TempRepo 'README.md') -Value 'edit' -Encoding UTF8
 
-        Clear-Junk -Force | Out-Null
+        Clear-Junk -Force -Aggressive | Out-Null
 
         Test-Path -LiteralPath (Join-Path $script:TempRepo 'README.md') | Should Be $true
     }
@@ -268,5 +270,13 @@ Describe 'Clear-Junk' {
 
         $logs = @(Get-ChildItem -LiteralPath $script:TempLogs -Filter 'Clear-Junk-*.log' -File)
         $logs.Count -gt 0 | Should Be $true
+    }
+
+    It '-Aggressive removes untracked files not in .gitignore when -Force is also supplied' {
+        Set-Content -LiteralPath (Join-Path $script:TempRepo 'random.tmp') -Value 'plain untracked' -Encoding UTF8
+
+        Clear-Junk -Force -Aggressive | Out-Null
+
+        Test-Path -LiteralPath (Join-Path $script:TempRepo 'random.tmp') | Should Be $false
     }
 }

@@ -8,6 +8,7 @@ $ExpectedPublicCommands = @(
     'Reset-Login',
     'Restore-File',
     'Save-Work',
+    'Search-History',
     'Set-Ssh',
     'Set-Token',
     'Set-Vault',
@@ -96,7 +97,8 @@ Describe 'GitEasy manifest and command surface' {
             'Switch-Work',
             'Restore-File',
             'Undo-Changes',
-            'Clear-Junk'
+            'Clear-Junk',
+            'Search-History'
         )
 
         foreach ($command in $implemented) {

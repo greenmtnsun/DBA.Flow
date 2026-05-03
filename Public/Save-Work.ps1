@@ -6,9 +6,13 @@ function Save-Work {
     .DESCRIPTION
     Save-Work is the main GitEasy command for preserving work. It runs three steps in one: it stages every change, records them as a saved point with your message, and then publishes the saved point to the project's published location unless you ask it not to.
 
+    Before publishing, Save-Work pulls down any peer updates and replays your saved point on top, so a teammate's recent push does not block yours. Any local changes are temporarily set aside and restored automatically.
+
     Save-Work does several safety checks before touching anything: it refuses to run inside an unfinished merge, rebase, cherry-pick, revert, or bisect; it refuses to save while there are unfinished conflicts; and it tells you in plain English when something is missing.
 
     When your work area has nothing new to save but you have saved-but-not-yet-published changes, Save-Work publishes those for you. When there is nothing local and nothing pending, it tells you "No changes to save."
+
+    With -BumpVersion, Save-Work also bumps the module manifest version (Major / Minor / Build / Revision) and prefixes your saved-point note with the new version number. Useful when you maintain a PowerShell module and want every saved point to carry a version stamp.
 
     Each Save-Work run writes a self-contained log file. Successful runs log silently. Failures throw a plain-English message and point at the log file with the technical detail.
 
@@ -17,6 +21,12 @@ function Save-Work {
 
     .PARAMETER NoPush
     Save your work locally only. Do not publish.
+
+    .PARAMETER BumpVersion
+    Before saving, find the .psd1 manifest in the active project and bump its ModuleVersion. The bumped version is also prefixed onto your saved-point message.
+
+    .PARAMETER BumpKind
+    Which part of the version number to bump when -BumpVersion is set. One of: Major, Minor, Build, Revision. Defaults to Build.
 
     .PARAMETER LogPath
     Override the directory where the diagnostic log for this run is written. Defaults to %LOCALAPPDATA%\GitEasy\Logs and can be overridden site-wide through the GITEASY_LOG_PATH environment variable.
@@ -28,7 +38,7 @@ function Save-Work {
     Save-Work 'Local checkpoint before refactor' -NoPush
 
     .EXAMPLE
-    Save-Work
+    Save-Work 'Add Search-History' -BumpVersion -BumpKind Minor
 
     .NOTES
     Safety:
@@ -57,6 +67,13 @@ function Save-Work {
 
         [Parameter()]
         [switch]$NoPush,
+
+        [Parameter()]
+        [switch]$BumpVersion,
+
+        [Parameter()]
+        [ValidateSet('Major', 'Minor', 'Build', 'Revision')]
+        [string]$BumpKind = 'Build',
 
         [Parameter()]
         [string]$LogPath = ''
@@ -108,6 +125,46 @@ function Save-Work {
 
         if ([string]::IsNullOrWhiteSpace($branch)) {
             throw 'Cannot save right now. No working area is active. Use Switch-Work or New-WorkBranch to start one.'
+        }
+
+        if ($BumpVersion) {
+            $userMessageOnFailure = 'Could not bump the module version.'
+
+            $manifestFile = @(Get-ChildItem -LiteralPath $repoRoot -Filter '*.psd1' -File | Select-Object -First 1)
+
+            if ($manifestFile.Count -eq 0) {
+                throw 'Cannot bump the version. No .psd1 manifest was found in the project root.'
+            }
+
+            $manifestPath = $manifestFile[0].FullName
+            $manifestData = Import-PowerShellDataFile -LiteralPath $manifestPath
+            $currentVersion = [version]$manifestData.ModuleVersion
+
+            $major = $currentVersion.Major
+            $minor = [math]::Max(0, $currentVersion.Minor)
+            $build = [math]::Max(0, $currentVersion.Build)
+            $revision = [math]::Max(0, $currentVersion.Revision)
+
+            switch ($BumpKind) {
+                'Major'    { $newVersion = "$($major + 1).0.0" }
+                'Minor'    { $newVersion = "$major.$($minor + 1).0" }
+                'Build'    { $newVersion = "$major.$minor.$($build + 1)" }
+                'Revision' { $newVersion = "$major.$minor.$build.$($revision + 1)" }
+            }
+
+            $manifestText = [System.IO.File]::ReadAllText($manifestPath)
+            $bumpedText = $manifestText -replace "ModuleVersion\s*=\s*'[^']+'", "ModuleVersion     = '$newVersion'"
+
+            [System.IO.File]::WriteAllText($manifestPath, $bumpedText, [System.Text.UTF8Encoding]::new($false))
+
+            if ([string]::IsNullOrWhiteSpace($Message)) {
+                $Message = "[v$newVersion] Save work " + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+            }
+            else {
+                $Message = "[v$newVersion] $Message"
+            }
+
+            Write-Host "Bumped module version to $newVersion ($BumpKind)."
         }
 
         $userMessageOnFailure = 'Could not check the workspace state.'
@@ -221,6 +278,19 @@ function Save-Work {
                 Write-Host 'No published location is configured. Saved locally only.'
             }
             else {
+                $userMessageOnFailure = 'Could not get peer updates before publishing.'
+
+                if ($hasUpstream) {
+                    $pullResult = Invoke-GEGit -ArgumentList @('pull', '--rebase') -WorkingDirectory $repoRoot -LogPath $session.Path -AllowFailure
+                    if ($pullResult.ExitCode -ne 0) {
+                        $rebaseInProgress = (Test-Path -LiteralPath (Join-Path $repoRoot '.git\rebase-merge')) -or (Test-Path -LiteralPath (Join-Path $repoRoot '.git\rebase-apply'))
+                        if ($rebaseInProgress) {
+                            Invoke-GEGit -ArgumentList @('rebase', '--abort') -WorkingDirectory $repoRoot -LogPath $session.Path -AllowFailure | Out-Null
+                        }
+                        throw 'Could not get peer updates before publishing. Your saved work is intact, but a peer made changes that conflict with yours. Resolve manually before publishing.'
+                    }
+                }
+
                 $userMessageOnFailure = 'Could not publish your saved work.'
 
                 if (-not $hasUpstream) {

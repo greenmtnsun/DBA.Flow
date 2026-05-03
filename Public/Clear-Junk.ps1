@@ -1,17 +1,20 @@
 function Clear-Junk {
     <#
     .SYNOPSIS
-    Find or remove obvious temporary files in the active project folder.
+    Find or remove ignored files in the active project folder.
 
     .DESCRIPTION
-    Clear-Junk identifies untracked files that match common "junk" patterns - editor backups, build leftovers, swap files - and either lists them or removes them, depending on whether you pass -Force.
+    Clear-Junk uses your project's `.gitignore` to identify files that are considered junk - build outputs, editor leftovers, temporary files, anything you have already declared as not worth saving. By default, Clear-Junk lists what would be removed but takes no action. Pass -Force to actually delete the listed files.
 
-    By default, Clear-Junk is a dry run: it returns a list of candidate files but removes nothing. Pass -Force to actually delete them. Tracked files are never touched even with -Force.
+    Tracked files are never touched. Files that are untracked but not matched by `.gitignore` are not touched either; pass -Aggressive together with -Force to also remove those.
 
     Each invocation writes a self-contained diagnostic log file. Successful runs log silently; failures throw a plain-English message and point at the log file with the technical detail.
 
     .PARAMETER Force
-    Actually remove the candidate files. Without this switch, Clear-Junk only lists what it would remove.
+    Actually remove the listed files. Without this switch, Clear-Junk only lists what it would remove.
+
+    .PARAMETER Aggressive
+    Together with -Force, also remove untracked files that are not matched by `.gitignore`. Without this, only ignored files are removed.
 
     .PARAMETER LogPath
     Override the directory where the diagnostic log for this run is written.
@@ -26,16 +29,17 @@ function Clear-Junk {
     Find-CodeChange; Clear-Junk; Find-CodeChange
 
     .NOTES
-    Junk patterns: *.bak, *.tmp, *.swp, *~ (editor backups), and Thumbs.db.
-
     Safety:
-    - Default is a dry run; never deletes without -Force.
+    - Default is a list-only dry run; never deletes without -Force.
     - Tracked files are never touched.
+    - Use Set-Vault -WriteIgnoreList if you want a starter .gitignore for a fresh project.
     - Refuses to run during an unfinished merge, rebase, cherry-pick, revert, or bisect.
-    - Run Find-CodeChange before and after to inspect the result.
 
     .LINK
     Find-CodeChange
+
+    .LINK
+    Set-Vault
 
     .LINK
     Save-Work
@@ -47,6 +51,9 @@ function Clear-Junk {
     param(
         [Parameter()]
         [switch]$Force,
+
+        [Parameter()]
+        [switch]$Aggressive,
 
         [Parameter()]
         [string]$LogPath = ''
@@ -75,26 +82,11 @@ function Clear-Junk {
             $repoRoot = $rootResult.Output | Select-Object -First 1
         }
 
-        $junkPatterns = @('*.bak', '*.tmp', '*.swp', '*~', 'Thumbs.db')
+        $cleanFlags = if ($Aggressive) { '-fdx' } else { '-fdX' }
+        $dryFlags   = if ($Aggressive) { '-ndx' } else { '-ndX' }
 
-        $statusResult = Invoke-GEGit -ArgumentList @('status', '--porcelain=v1') -WorkingDirectory $repoRoot -LogPath $session.Path
-        $untracked = @()
-        foreach ($line in $statusResult.Output) {
-            if ($line -match '^\?\?\s+(.+)$') {
-                $untracked += $Matches[1].Trim('"')
-            }
-        }
-
-        $candidates = New-Object System.Collections.Generic.List[string]
-        foreach ($file in $untracked) {
-            $name = Split-Path -Path $file -Leaf
-            foreach ($pattern in $junkPatterns) {
-                if ($name -like $pattern) {
-                    $candidates.Add($file)
-                    break
-                }
-            }
-        }
+        $dryResult = Invoke-GEGit -ArgumentList @('clean', $dryFlags) -WorkingDirectory $repoRoot -LogPath $session.Path
+        $candidates = @($dryResult.Output | Where-Object { $_ -match '^Would remove\s+(.+)$' } | ForEach-Object { ($_ -replace '^Would remove\s+','').Trim() })
 
         if ($candidates.Count -eq 0) {
             Write-Host 'No junk files found.'
@@ -128,16 +120,11 @@ function Clear-Junk {
             return
         }
 
-        $removed = 0
-        foreach ($c in $candidates) {
-            $full = Join-Path $repoRoot $c
-            if (Test-Path -LiteralPath $full -PathType Leaf) {
-                Remove-Item -LiteralPath $full -Force -ErrorAction SilentlyContinue
-                if (-not (Test-Path -LiteralPath $full -PathType Leaf)) {
-                    $removed++
-                }
-            }
-        }
+        Invoke-GEGit -ArgumentList @('clean', $cleanFlags) -WorkingDirectory $repoRoot -LogPath $session.Path | Out-Null
+
+        $verifyResult = Invoke-GEGit -ArgumentList @('clean', $dryFlags) -WorkingDirectory $repoRoot -LogPath $session.Path
+        $remaining = @($verifyResult.Output | Where-Object { $_ -match '^Would remove\s+' }).Count
+        $removed = $candidates.Count - $remaining
 
         Write-Host "Removed $removed junk file(s)."
 

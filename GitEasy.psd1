@@ -1,11 +1,11 @@
 @{
     RootModule        = 'GitEasy.psm1'
-    ModuleVersion     = '1.0.0'
-    GUID              = 'a7f52f47-87b2-42c4-9f37-9f329edb7a01'
+    ModuleVersion     = '1.1.0'
+    GUID              = '2e113abf-c0e7-4dfb-9cb1-69476d7541f6'
     Author            = 'Keith Ramsey'
     CompanyName       = 'Keith Ramsey'
     Copyright         = '(c) Keith Ramsey. Licensed under the Mozilla Public License 2.0.'
-    Description       = 'Plain-English Git workflow for PowerShell. Classic GitEasy public commands with a safer V2 engine, per-invocation diagnostic logs, and no jargon in the user surface.'
+    Description       = 'Plain-English Git workflow for PowerShell. Classic GitEasy public commands with a safer engine, per-invocation diagnostic logs, and no jargon in the user surface.'
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
         'Clear-Junk'
@@ -15,6 +15,7 @@
         'Reset-Login'
         'Restore-File'
         'Save-Work'
+        'Search-History'
         'Set-Ssh'
         'Set-Token'
         'Set-Vault'

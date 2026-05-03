@@ -11,6 +11,7 @@ Export-ModuleMember -Function @(
     'Reset-Login',
     'Restore-File',
     'Save-Work',
+    'Search-History',
     'Set-Ssh',
     'Set-Token',
     'Set-Vault',
