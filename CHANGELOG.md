@@ -2,6 +2,26 @@
 
 All notable changes to this module are recorded here. The format is loosely [Keep a Changelog](https://keepachangelog.com/), and this project follows semantic versioning.
 
+## [1.4.0] - 2026-05-03
+
+Three findings from the dogfood test, all fixed.
+
+### Fixed
+
+- **Save-Work -BumpVersion only searched the project root for a manifest** (HARD). The conventional layout for non-trivial PowerShell modules is `<RepoRoot>\<ModuleName>\<ModuleName>.psd1`, which the old logic missed entirely. **Fix:** Save-Work now searches the project root plus one level deep, prefers a manifest whose name matches its parent folder (the conventional pattern), then falls back to a root-level manifest, then to any nested manifest found. Tested with the standard nested layout.
+- **Find-CodeChange: Status field truncated in default console rendering** (MEDIUM). The default `Format-Table` view squeezed a multi-element `Status` array into a single column and clipped it. Operators had to know to access `$obj.Status` directly. **Fix:** added `Format\GitEasy.format.ps1xml` with a clean default Table view that shows just the counts (Branch, Clean, Total, Staged, Unstaged, Untracked, Repository). Pipe to `Format-List` for the full Status, DiffStat, and StagedDiffStat arrays. The returned object now carries `PSTypeName = 'GitEasy.CodeChange'` so the format file applies cleanly.
+- **Find-CodeChange: UntrackedCount inflated when an untracked directory contained multiple files** (LOW-MEDIUM). Git's behavior here depends on the `core.untrackedfiles` config — with `all`, an untracked directory shows one line per file inside; with `normal` (the conventional default), the directory collapses to one entry. **Fix:** `Get-GECodeChange` now pins `--untracked-files=normal` on the underlying `git status` call so the count is deterministic regardless of user config. An untracked folder with 7 files reports `UntrackedCount = 1`.
+
+### Changed
+
+- Module manifest now declares `FormatsToProcess = @('Format\GitEasy.format.ps1xml')`.
+- Install-GitEasy.ps1 also copies the `Format\` folder to the install location.
+- 3 new Pester tests: PSTypeName presence; untracked-folder count semantics; nested-layout BumpVersion.
+
+### Tests
+
+- **113 Pester 3 tests** passing on Windows PowerShell 5.1 and PowerShell 7+ (was 110).
+
 ## [1.3.0] - 2026-05-03
 
 Tag/release management is now on the public surface. First gap surfaced by the dogfood test (a sister Claude session running real workflow on a different project) is fixed.

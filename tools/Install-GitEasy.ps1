@@ -127,7 +127,8 @@ $includePaths = @(
 
 $includeFolders = @(
     'Public',
-    'Private'
+    'Private',
+    'Format'
 )
 
 $installedTargets = @()

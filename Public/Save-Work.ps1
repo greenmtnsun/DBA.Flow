@@ -130,13 +130,40 @@ function Save-Work {
         if ($BumpVersion) {
             $userMessageOnFailure = 'Could not bump the module version.'
 
-            $manifestFile = @(Get-ChildItem -LiteralPath $repoRoot -Filter '*.psd1' -File | Select-Object -First 1)
+            # Search the project root, plus one level deep, for a .psd1 manifest.
+            # Common layouts are <RepoRoot>\Module.psd1 (flat) and
+            # <RepoRoot>\<ModuleName>\<ModuleName>.psd1 (nested).
+            $rootManifests = @(Get-ChildItem -LiteralPath $repoRoot -Filter '*.psd1' -File -ErrorAction SilentlyContinue)
 
-            if ($manifestFile.Count -eq 0) {
-                throw 'Cannot bump the version. No .psd1 manifest was found in the project root.'
+            $nestedManifests = @()
+            $subDirs = @(Get-ChildItem -LiteralPath $repoRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch '^\.' })
+            foreach ($subDir in $subDirs) {
+                $found = @(Get-ChildItem -LiteralPath $subDir.FullName -Filter '*.psd1' -File -ErrorAction SilentlyContinue)
+                foreach ($f in $found) {
+                    $nestedManifests += $f
+                }
             }
 
-            $manifestPath = $manifestFile[0].FullName
+            $allManifests = @($rootManifests) + @($nestedManifests)
+
+            if ($allManifests.Count -eq 0) {
+                throw 'Cannot bump the version. No .psd1 manifest was found at the project root or one level deep.'
+            }
+
+            # Prefer a manifest whose name matches the parent folder name (the conventional <ModuleName>\<ModuleName>.psd1 pattern).
+            $preferred = $allManifests | Where-Object { $_.BaseName -eq (Split-Path -Path (Split-Path -Path $_.FullName -Parent) -Leaf) } | Select-Object -First 1
+
+            # If no matching-name manifest, prefer a root-level manifest (flat layout).
+            if (-not $preferred -and $rootManifests.Count -gt 0) {
+                $preferred = $rootManifests | Select-Object -First 1
+            }
+
+            # Last resort: take the first nested manifest we found.
+            if (-not $preferred) {
+                $preferred = $allManifests | Select-Object -First 1
+            }
+
+            $manifestPath = $preferred.FullName
             $manifestData = Import-PowerShellDataFile -LiteralPath $manifestPath
             $currentVersion = [version]$manifestData.ModuleVersion
 

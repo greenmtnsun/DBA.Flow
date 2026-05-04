@@ -192,6 +192,30 @@ Describe 'Save-Work -BumpVersion' {
         $log = Invoke-TestGit -ArgumentList @('log', '-1', '--pretty=%s')
         ($log.Output -join '') | Should Match '^\[v1\.3\.0\] fix the thing$'
     }
+
+    It 'finds and bumps a manifest in the conventional <ModuleName>\<ModuleName>.psd1 nested layout' {
+        $nested = Join-Path $script:TempRepo 'NestedModule'
+        New-Item -Path $nested -ItemType Directory -Force | Out-Null
+
+        Set-Content -LiteralPath (Join-Path $nested 'NestedModule.psd1') -Encoding UTF8 -Value @"
+@{
+    RootModule = 'NestedModule.psm1'
+    ModuleVersion = '2.5.7'
+    GUID = '00000000-0000-0000-0000-000000000077'
+    Author = 'Test'
+}
+"@
+        Set-Content -LiteralPath (Join-Path $nested 'NestedModule.psm1') -Value 'function NestedFn {}' -Encoding UTF8
+        Invoke-TestGit -ArgumentList @('add', '-A') | Out-Null
+        Invoke-TestGit -ArgumentList @('commit', '-m', 'add nested module') | Out-Null
+
+        Set-Content -LiteralPath (Join-Path $script:TempRepo 'change.txt') -Value 'something' -Encoding UTF8
+        Save-Work 'nested bump' -NoPush -BumpVersion -BumpKind Minor
+
+        # The nested manifest should be bumped (1.2.3 -> 2.6.0 since both manifests exist; conventional preference picks the nested one)
+        $nestedManifest = Import-PowerShellDataFile -LiteralPath (Join-Path $nested 'NestedModule.psd1')
+        $nestedManifest.ModuleVersion | Should Be '2.6.0'
+    }
 }
 
 Describe 'Set-Vault -WriteIgnoreList' {

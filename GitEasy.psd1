@@ -1,12 +1,13 @@
 @{
     RootModule        = 'GitEasy.psm1'
-    ModuleVersion     = '1.3.0'
+    ModuleVersion     = '1.4.0'
     GUID              = '2e113abf-c0e7-4dfb-9cb1-69476d7541f6'
     Author            = 'Keith Ramsey'
     CompanyName       = 'Keith Ramsey'
     Copyright         = '(c) Keith Ramsey. Licensed under the Mozilla Public License 2.0.'
     Description       = 'Plain-English Git workflow for PowerShell. Classic GitEasy public commands with a safer engine, per-invocation diagnostic logs, and no jargon in the user surface.'
     PowerShellVersion = '5.1'
+    FormatsToProcess  = @('Format\GitEasy.format.ps1xml')
     FunctionsToExport = @(
         'Clear-Junk'
         'Find-CodeChange'

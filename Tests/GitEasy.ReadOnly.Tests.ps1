@@ -92,5 +92,21 @@ Describe 'read-only GitEasy commands' {
         ($dirty.ChangeCount -gt 0) | Should Be $true
         ($dirty.UntrackedCount -gt 0) | Should Be $true
     }
+
+    It 'Find-CodeChange returns an object with PSTypeName GitEasy.CodeChange' {
+        $r = Find-CodeChange
+        ($r.PSObject.TypeNames -contains 'GitEasy.CodeChange') | Should Be $true
+    }
+
+    It 'Find-CodeChange counts an untracked directory as 1 entry, not one per file inside' {
+        $dir = Join-Path $script:TempRepo 'untracked-folder'
+        New-Item -Path $dir -ItemType Directory -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $dir 'a.txt') -Value 'a' -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $dir 'b.txt') -Value 'b' -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $dir 'c.txt') -Value 'c' -Encoding UTF8
+
+        $r = Find-CodeChange
+        $r.UntrackedCount | Should Be 1
+    }
 }
 
