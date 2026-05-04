@@ -76,10 +76,15 @@ foreach ($t in $Target) {
 }
 Write-Host ''
 
-# Pester gate
+# Pester gate (pinned to Pester 3 - tests are written in Pester 3 syntax)
 if (-not $SkipPesterCheck) {
     Write-Host 'Running Pester suite before install...' -ForegroundColor Cyan
-    Import-Module Pester -Force
+    $pester3 = Get-Module -ListAvailable Pester | Where-Object { $_.Version.Major -lt 4 } | Sort-Object Version -Descending | Select-Object -First 1
+    if (-not $pester3) {
+        throw 'Pester 3 is not installed. Install it with: Install-Module Pester -RequiredVersion 3.4.0 -SkipPublisherCheck -Scope AllUsers -Force'
+    }
+    Remove-Module Pester -Force -ErrorAction SilentlyContinue
+    Import-Module $pester3.Path -Force
     $pesterResult = Invoke-Pester -Script (Join-Path $Source 'Tests') -PassThru -Quiet
 
     if ($pesterResult.FailedCount -gt 0) {

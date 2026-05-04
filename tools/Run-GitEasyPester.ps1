@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-Run the GitEasy Pester test suite using whichever Pester version is installed.
+Run the GitEasy Pester test suite using Pester 3 (the version the tests were written for).
 
 .DESCRIPTION
-Loads the highest installed Pester version and invokes the test runner over the Tests folder. Picks the right invocation form for Pester 3 vs Pester 5+. Throws on any failed tests.
+Explicitly loads Pester 3 (preferring 3.4.x) and invokes the test runner over the Tests folder. GitEasy tests are written in Pester 3 syntax; loading Pester 5 would silently mis-run them via the legacy adapter, so this script pins Pester 3 to keep behavior deterministic across machines.
 
 .PARAMETER ProjectRoot
 Absolute path to the GitEasy source repository. Defaults to C:\Sysadmin\Scripts\GitEasy.
@@ -33,12 +33,13 @@ if (-not (Test-Path -LiteralPath $testRoot)) {
     throw "Missing test folder: $testRoot"
 }
 
-$pester = Get-Module -ListAvailable Pester | Sort-Object Version -Descending | Select-Object -First 1
+$pester = Get-Module -ListAvailable Pester | Where-Object { $_.Version.Major -lt 4 } | Sort-Object Version -Descending | Select-Object -First 1
 
 if (-not $pester) {
-    throw "Pester is not installed. Install it with: Install-Module Pester -Scope CurrentUser -Force"
+    throw "Pester 3 is not installed. Install it with: Install-Module Pester -RequiredVersion 3.4.0 -SkipPublisherCheck -Scope AllUsers -Force"
 }
 
+Remove-Module Pester -Force -ErrorAction SilentlyContinue
 Import-Module $pester.Path -Force
 
 Write-Host ""
@@ -47,12 +48,7 @@ Write-Host "Project: $ProjectRoot"
 Write-Host "Pester:  $($pester.Version)"
 Write-Host ""
 
-if ($pester.Version.Major -ge 5) {
-    $result = Invoke-Pester -Path $testRoot -PassThru -Output Detailed
-}
-else {
-    $result = Invoke-Pester -Script $testRoot -PassThru
-}
+$result = Invoke-Pester -Script $testRoot -PassThru
 
 $summary = [PSCustomObject]@{
     Total   = $result.TotalCount
