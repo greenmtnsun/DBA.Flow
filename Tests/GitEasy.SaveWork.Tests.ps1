@@ -188,7 +188,9 @@ Describe 'Save-Work — new contract' {
         $lfPath = Join-Path $script:TempRepo 'lf.txt'
         [System.IO.File]::WriteAllText($lfPath, "line one`nline two`n", [System.Text.UTF8Encoding]::new($false))
 
-        { Save-Work 'lf-warning test' -NoPush } | Should Not Throw
+        $thrown = $null
+        try { Save-Work 'lf-warning test' -NoPush } catch { $thrown = $_ }
+        $thrown | Should BeNullOrEmpty
     }
 
     It 'real merge conflicts block save with a plain-English message' {

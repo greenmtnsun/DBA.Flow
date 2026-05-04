@@ -124,7 +124,9 @@ Describe 'Show-History -Graph' {
     }
 
     It 'does not throw when -Graph is supplied' {
-        { Show-History -Graph } | Should Not Throw
+        $thrown = $null
+        try { Show-History -Graph } catch { $thrown = $_ }
+        $thrown | Should BeNullOrEmpty
     }
 }
 

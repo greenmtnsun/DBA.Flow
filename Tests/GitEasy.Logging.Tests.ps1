@@ -82,7 +82,9 @@ Describe 'Remove-GEOldLog' {
 
     It 'does not throw when the directory does not exist' {
         $missing = Join-Path $script:TempDir 'nope'
-        { & (Get-Module GitEasy) { param($d) Remove-GEOldLog -Directory $d -RetentionDays 30 } $missing } | Should Not Throw
+        $thrown = $null
+        try { & (Get-Module GitEasy) { param($d) Remove-GEOldLog -Directory $d -RetentionDays 30 } $missing } catch { $thrown = $_ }
+        $thrown | Should BeNullOrEmpty
     }
 
     It 'does not touch non-log files' {
@@ -157,6 +159,8 @@ Describe 'Show-Diagnostic' {
 
     It 'does not throw when the log directory does not exist' {
         Remove-Item -LiteralPath $script:TempLogs -Recurse -Force -ErrorAction SilentlyContinue
-        { Show-Diagnostic -List } | Should Not Throw
+        $thrown = $null
+        try { Show-Diagnostic -List } catch { $thrown = $_ }
+        $thrown | Should BeNullOrEmpty
     }
 }
